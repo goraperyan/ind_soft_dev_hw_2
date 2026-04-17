@@ -1,0 +1,87 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: log-archive
+  namespace: logging-hw
+spec:
+  schedule: "*/10 * * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          annotations:
+            sidecar.istio.io/inject: "false"
+        spec:
+          serviceAccountName: log-archiver
+          restartPolicy: OnFailure
+          containers:
+            - name: archiver
+              image: python:3.11-alpine
+              imagePullPolicy: IfNotPresent
+              command:
+                - sh
+                - -c
+                - |
+                  mkdir -p /app/logs
+
+                  python - <<'PY'
+                  import json
+                  import os
+                  import ssl
+                  import urllib.request
+
+                  namespace_path = "/var/run/secrets/kubernetes.io/serviceaccount/namespace"
+                  token_path = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+                  ca_path = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+
+                  with open(namespace_path, "r", encoding="utf-8") as f:
+                      namespace = f.read().strip()
+
+                  with open(token_path, "r", encoding="utf-8") as f:
+                      token = f.read().strip()
+
+                  service_name = "custom-app-service"
+                  k8s_url = f"https://kubernetes.default.svc/api/v1/namespaces/{namespace}/endpoints/{service_name}"
+
+                  req = urllib.request.Request(
+                      k8s_url,
+                      headers={"Authorization": f"Bearer {token}"}
+                  )
+
+                  context = ssl.create_default_context(cafile=ca_path)
+
+                  with urllib.request.urlopen(req, context=context, timeout=10) as resp:
+                      data = json.load(resp)
+
+                  ips = []
+                  for subset in data.get("subsets", []):
+                      for addr in subset.get("addresses", []):
+                          ip = addr.get("ip")
+                          if ip:
+                              ips.append(ip)
+
+                  ips = sorted(set(ips))
+                  os.makedirs("/app/logs", exist_ok=True)
+
+                  for i, ip in enumerate(ips, start=1):
+                      url = f"http://{ip}:8080/logs"
+                      try:
+                          with urllib.request.urlopen(url, timeout=5) as resp:
+                              content = resp.read().decode("utf-8", errors="replace")
+                      except Exception as e:
+                          content = f"ERROR from {ip}: {e}\n"
+
+                      filename = f"/app/logs/pod-{i}-{ip.replace('.', '-')}.log"
+                      with open(filename, "w", encoding="utf-8") as f:
+                          f.write(content)
+
+                  print("Collected logs from IPs:", ips)
+                  PY
+
+                  TS=$(date +%Y%m%d-%H%M%S)
+                  tar -czf /tmp/app-logs-${TS}.tar.gz /app/logs
+                  echo "Archive created: /tmp/app-logs-${TS}.tar.gz"
+                  ls -lh /tmp

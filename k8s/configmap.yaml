@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: custom-app-config
+  namespace: logging-hw
+data:
+  APP_PORT: "8080"
+  app-config.json: |
+    {
+      "welcome_message": "Welcome to the custom app",
+      "log_level": "INFO"
+    }

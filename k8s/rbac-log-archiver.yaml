@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: log-archiver
+  namespace: logging-hw
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: log-archiver-role
+  namespace: logging-hw
+rules:
+  - apiGroups: [""]
+    resources: ["endpoints"]
+    verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: log-archiver-binding
+  namespace: logging-hw
+subjects:
+  - kind: ServiceAccount
+    name: log-archiver
+    namespace: logging-hw
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: log-archiver-role
