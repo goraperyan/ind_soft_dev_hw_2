@@ -15,14 +15,14 @@ In another terminal:
     curl -i http://127.0.0.1:8080/status
 
     curl -i -X POST http://127.0.0.1:8080/log \
-  -H 'Content-Type: application/json' \
-  -d '{"message":"direct service call works"}'
+    -H 'Content-Type: application/json' \
+    -d '{"message":"direct service call works"}'
 
     curl -i http://127.0.0.1:8080/logs
 
     for i in {1..10}; do
-  curl -s -D - http://127.0.0.1:8080/status -o /dev/null | grep X-Pod-Name
-done
+    curl -s -D - http://127.0.0.1:8080/status -o /dev/null | grep X-Pod-Name
+    done
 
 
 ## Test Istio Gateway
@@ -38,8 +38,8 @@ In another terminal:
     curl -i http://127.0.0.1:8081/wrong
 
     time curl -i -X POST http://127.0.0.1:8081/log \
-  -H 'Content-Type: application/json' \
-  -d '{"message":"through istio gateway"}'
+    -H 'Content-Type: application/json' \
+    -d '{"message":"through istio gateway"}'
 
     Last one expects: HTTP 504 Gateway Timeout
 
