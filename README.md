@@ -41,5 +41,5 @@ In another terminal:
     -H 'Content-Type: application/json' \
     -d '{"message":"through istio gateway"}'
 
-    Last one expects: HTTP 504 Gateway Timeout
+Last one expects: HTTP 504 Gateway Timeout
 
